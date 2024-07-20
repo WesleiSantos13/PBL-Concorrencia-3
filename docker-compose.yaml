@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  node1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7798:7798"
+    environment:
+      - ADDRESNODES=['172.16.103.7', '172.16.103.11', '172.16.103.4']
+    networks:
+      minha_rede:
+        ipv4_address: 192.168.0.2
+
+networks:
+  minha_rede:
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.0.0/24
