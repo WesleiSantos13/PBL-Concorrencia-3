@@ -55,18 +55,7 @@ def handle_connection(conn):
                 print(f"Erro na conexão: {e}")
                 break
 
-def server():
-    """Função do servidor que aceita conexões"""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind((HOST, PORT))
-        s.listen()
-        while not stop_event.is_set():
-            try:
-                conn, addr = s.accept()
-                threading.Thread(target=handle_connection, args=(conn,)).start()
-            except Exception as e:
-                print(f"Erro ao aceitar conexão: {e}")
-                break
+
 
 def client():
     """Função do cliente que envia o tempo e o líder para outros relógios"""

@@ -26,7 +26,7 @@ class Election:
 # }
     def initElection(self, nodeId):
         iAmLeader = False
-        #### FASE EM QUE ESTOU VERIFICANDO SE POSSO SER O LÍDER ####
+        #### FASE EM QUE ESTOU VERIFICANDO SE POSSO SER O LÍDER #### PERGUNTO A TODOS OS NÓS
         for node in config['OtherNodes'].keys(): # ["1", "2", "3"]
             # Se não for pro próprio nó
             if node != nodeId:

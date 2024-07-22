@@ -1,6 +1,28 @@
 import socket
 import time
 from infra.config import config
+import threading
+
+
+
+
+def acceptConnTCP():
+    """Função do servidor que aceita conexões.
+    A idéia é que sempre que alguém queira se comunicar, abra uma conexão antes de enviar a mensagem
+    """
+    socket_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    socket_tcp.settimeout(2)
+    
+    socket_tcp.bind((config['OtherNodes'][config['nodeId']], config['port']))
+    max_num_conn = len(list(config['OtherNodes'].keys()))
+    socket_tcp.listen(max_num_conn)
+    while True:
+        try:
+            conn, addr = socket_tcp.accept()
+            threading.Thread(target=handle_connection, args=(conn,)).start()
+        except Exception as e:
+            print(f"Erro ao aceitar conexão: {e}")
+            break
 
 def __createConn(ip: str):
     socket_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

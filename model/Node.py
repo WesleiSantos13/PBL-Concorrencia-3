@@ -1,6 +1,8 @@
 import threading
 import time
 import socket
+from datetime import datetime, timedelta
+
 from typing import TypedDict
 from infra.config import config
 
@@ -26,24 +28,43 @@ class Clock:
     '''É UMA CLASSE SINGLETON'''
     _instance = None
 
+
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
-            cls._instance = super(Clock, cls).__new__(cls, *args, **kwargs)
+            cls._instance = super(Clock, cls).__new__(cls)
         return cls._instance
     
     def __init__(self, drift: float, startTime: int) -> None:
-        self.drift: float = drift #
-        self.time: int = startTime # Tempo inicial do relógio
-        self.lock = threading.Lock() # 
-        self.power: bool = True # Indica se o relógio está ligado
-        self.nodes: ObjNode = {} # Aqui vai ser um hash que possui as infos de todos os relógios
-        self.id: str = config['nodeId'] # O id próprio do nó
-        self.state: State = State.PARTICIPANT # 
-        self.otherNodes = config['OtherNodes'] # Dados sobre os outros nós, preciso fazer isso para garantir a exclusão mútua
+        if not hasattr(self, 'initialized'):  # Verifica se já foi inicializado
+            self.drift: float = drift #
+            self.time: int = startTime # Tempo inicial do relógio
+            self.lock = threading.Lock() # 
+            self.power: bool = True # Indica se o relógio está ligado
+            self.id: str = config['nodeId'] # O id próprio do nó
+            self.state: State = State.PARTICIPANT # 
+            self.leader:str = None # Aqui será o id do líder
+            self.leaderLastContact: datetime = None
 
-    def updateConn(self, nodeId, conn):
+    def imLeader(self) -> bool:
+        return self.leader == self.id
+    
+
+    def withoutContactLeader(self, now: datetime):
+        '''Após 2 segundos do último contato do líder, irá retornar True'''
+        # Se for None (acabei de inicializar), devo informar que devo iniciar uma eleição
+        if self.leaderLastContact is None:
+            return True
+        # Caso contrário, faço a verificação de tempo
         self.lock.acquire()
-        self.otherNodes[nodeId]['conn'] = conn
+        difference = abs(self.leaderLastContact - now)
+        self.lock.release()
+
+        return difference > timedelta(seconds=2)
+
+
+    def setLeaderLastContact(self, leaderLastContact):
+        self.lock.acquire()
+        self.leaderLastContact = leaderLastContact
         self.lock.release()
 
     def getDrift(self):
