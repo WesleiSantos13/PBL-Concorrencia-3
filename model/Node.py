@@ -49,6 +49,13 @@ class Clock:
     def imLeader(self) -> bool:
         return self.leader == self.id
     
+    def getLeader(self):
+        return self.leader
+    
+    def setLeader(self, new_node_id_leader):
+        self.lock.acquire()
+        self.leader = new_node_id_leader
+        self.lock.release()
 
     def leaderIsDead(self, now: datetime):
         '''Após 2 segundos do último contato do líder, irá retornar True'''

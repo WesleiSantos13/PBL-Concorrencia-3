@@ -34,42 +34,38 @@ def forced_time_update():
     '''Atualiza o tempo do relógio. (ACESSADO EXCLUSIVAMENTE POR UM LIDER)'''
     # Obtem o body da requisição
     content = request.json
-    new_time = content['time']
-    # Atualiza o tempo
-    clock.setTime(new_time)
-    return jsonify({"msg": "ok"}), 200
+    # Se a mensagem veio de quem eu enxergo como líder
+    if content['node'] == clock.getLeader():
+        new_time = content['time']
+        # Atualiza o tempo
+        clock.setTime(new_time)
+        return jsonify({"msg": "ok"}), 200
+    # Se não veio do líder
+    else:
+        return jsonify({"msg": "__"}), 400
 
 
 
 @app.route('/compare_election', methods=['POST'])
-def post_mensagem():
+def compare_votes():
     '''Utilizado como peça de uma eleição para comparação de vencedor dois a dois'''
     # Obtem o body da requisição
     content = request.json
     if content['time'] > clock.time:
+        # Quem receber este deverá continuar a eleição
         return jsonify({"msg": "you_win"}), 200
     else:
+        # Quem receber este deverá encerra eleição e aguardar que seja dito quem é o líder
         return jsonify({"msg": "i_win"}), 200
         
 
 @app.route('/define_election', methods=['POST'])
-def post_mensagem(topic: str):
-    '''Utilizado como peça de uma eleição para informar que sou um vencedor'''
-    # Se não for um tópico permitido, já encerra e retorna o status
-    if not topic.startswith('command'):
-        return jsonify({"erro": "Você não tem permissão para este topico"}), 403
+def result_election():
+    '''Utilizado como peça de uma eleição para informar quem é o vencedor'''
     # Obtem o body da requisição
-    conteudo = request.json
-    # Verifica se a solicitação contém um JSON
-    if conteudo is None:
-        return jsonify({"erro": "A solicitação deve conter um JSON"}), 400
-    confirm = broker.publish_message(topic, conteudo['message'], '')
-    status = 201
-    msg = "Mensagem publicada com sucesso"
-    if not confirm:
-        status = 200
-        msg = "Recebemos a solicitação, mas não conseguimos processar"
-    return jsonify({"mensagem": msg}), status
+    content = request.json
+    clock.setLeader(content['node']) # Salva o id do nó vencedor
+    return jsonify({"msg": "ok"}), 200
 
 
 
@@ -118,3 +114,9 @@ def verifyContactLeader( clock: Clock, election: Election):
 # Colocar a thread da rotina eterna
 if __name__ == '__main__':
     app.run(port=config['port'], host='0.0.0.0')
+
+
+
+# Colocar as thread do menu
+# Colocar as thread que verifica se o líder caiu
+# Colocar a thread de rotina diária de um líder (ficar sempre pedindo)
