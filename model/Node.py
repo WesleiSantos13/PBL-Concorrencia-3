@@ -9,10 +9,10 @@ from infra.config import config
 from enum import Enum
 
 class State(Enum):
-    CANDIDATE = 1 # Quando ele inicia uma eleição
-    LEADER = 2 # Quando ele é o líder
-    INACTIVE = 3 # Quando ele percebe que está inativo
-    PARTICIPANT = 4 # Quando ele está ativo, mas não é líder
+    DOWN = 1 # Quando um processo cai
+    NORMAL = 2 # Quando tudo está funcionando normalmente
+    ELECTION = 3 # Quando se deve iniciar uma eleição
+    REORGANIZING= 4 # Quando deve avisar aos demais o resultado da eleição
 
 
 
@@ -36,6 +36,7 @@ class Clock:
     
     def __init__(self, drift: float, startTime: int) -> None:
         if not hasattr(self, 'initialized'):  # Verifica se já foi inicializado
+            print("entrei")
             self.drift: float = drift #
             self.time: int = startTime # Tempo inicial do relógio
             self.lock = threading.Lock() # 
@@ -49,7 +50,7 @@ class Clock:
         return self.leader == self.id
     
 
-    def withoutContactLeader(self, now: datetime):
+    def leaderIsDead(self, now: datetime):
         '''Após 2 segundos do último contato do líder, irá retornar True'''
         # Se for None (acabei de inicializar), devo informar que devo iniciar uma eleição
         if self.leaderLastContact is None:

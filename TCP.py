@@ -1,6 +1,7 @@
 import socket
 import time
 from infra.config import config
+from model.Node import Clock
 import threading
 
 
@@ -24,23 +25,32 @@ def acceptConnTCP():
             print(f"Erro ao aceitar conexão: {e}")
             break
 
-def __createConn(ip: str):
-    socket_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # Faço a conexão
-    socket_tcp.connect((ip, config['portToTCP']))
-    socket_tcp.settimeout(1)
+# def __createConn(ip: str):
+#     socket_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     # Faço a conexão
+#     socket_tcp.connect((ip, config['portToTCP']))
+#     socket_tcp.settimeout(1)
 
 
 
-def controlParticipantTime():
-    # Manda mensagem pedindo
-    time1 = time.time()
-    # Aguarda a reposta
-    time2 = time.time()
-    latence = time2 - time1
-    # o tempo final recebido é t + latence
+def controlParticipantTime(clock: Clock):
+    withou_contact = 0
+    len_nodes = len(config['OtherNodes'].keys())
+    for node in config['OtherNodes'].keys(): # ["1", "2", "3"]
+        # Se não for pro próprio nó
+        if node != clock.id:
+            pass
+        # Peço o horário de um nó
+        # Verifico se o horário dele é maior que o meu
+            # se for convoco eleição
+        # Se não for
+            # verifico se a diferença entre horários é maior que 10
+                # Se for, mando ele atualizar a metade
+                # mando ele inserir meu horário
 
     # Se eu caí, tento iniciar uma eleição
+    if withou_contact == len_nodes:
+        pass
 
 def responseTimeToLeader():
     ''''''

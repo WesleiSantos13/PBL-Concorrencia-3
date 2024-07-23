@@ -1,21 +1,60 @@
 version: '3.8'
 
+## Este arquivo é apenas para teste ## 
+
+
 services:
   node1:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "7798:7798"
+    # ports:
+    #   - "7798:7798"
     environment:
-      - ADDRESNODES=['172.16.103.7', '172.16.103.11', '172.16.103.4']
+        - NODEID=1
+    #   - ADDRESNODES=['172.16.103.7', '172.16.103.11', '172.16.103.4']
+    volumes:
+      - .:/app
+    tty: true
     networks:
       minha_rede:
-        ipv4_address: 192.168.0.2
+        ipv4_address: 172.16.103.11
+  
+  node2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # ports:
+    #   - "7798:7798"
+    environment:
+        - NODEID=2
+    #   - ADDRESNODES=['172.16.103.7', '172.16.103.11', '172.16.103.4']
+    volumes:
+      - .:/app
+    tty: true
+    networks:
+      minha_rede:
+        ipv4_address: 172.16.103.7
+
+  node3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # ports:
+    #   - "7798:7798"
+    environment:
+        - NODEID=3
+    #   - ADDRESNODES='{1: 172.16.103.7, 2: 172.16.103.11, 3: 172.16.103.4}'
+    volumes:
+      - .:/app
+    tty: true
+    networks:
+      minha_rede:
+        ipv4_address: 172.16.103.4
 
 networks:
   minha_rede:
     ipam:
       driver: default
       config:
-        - subnet: 192.168.0.0/24
+        - subnet: 172.16.103.0/24
