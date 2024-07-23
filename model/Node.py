@@ -42,7 +42,7 @@ class Clock:
             self.lock = threading.Lock() # 
             self.power: bool = True # Indica se o relógio está ligado
             self.id: str = config['nodeId'] # O id próprio do nó
-            self.state: State = State.PARTICIPANT # 
+            self.state: State = State.NORMAL # 
             self.leader:str = None # Aqui será o id do líder
             self.leaderLastContact: datetime = None
 
