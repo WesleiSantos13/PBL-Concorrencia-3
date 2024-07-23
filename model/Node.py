@@ -49,6 +49,9 @@ class Clock:
     def imLeader(self) -> bool:
         return self.leader == self.id
     
+    def getTime(self):
+        return self.time
+    
     def getLeader(self):
         return self.leader
     
