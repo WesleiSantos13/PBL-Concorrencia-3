@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 
 import threading
 
+import os
+
 from infra.config import config
 
 from model.Node import Clock
@@ -80,7 +82,9 @@ def menu(clock: Clock):
     Será executado como uma thread"""
 
     while True:
-        print("\nMenu:")
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print(f"Drift={clock.getDrift()}  Time={clock.getTime()}")
+        print("=======Menu=======")
         print("[1] Alterar valor do drift")
         print("[2] Alterar valor do relógio")
         print("[3] Sair")
@@ -118,7 +122,7 @@ def verifyContactLeader( clock: Clock, election: Election):
 
 def leaderRoutine(clock:Clock, election: Election):
     withou_contact = 0
-    len_nodes = len(config['OtherNodes'].keys())
+    len_nodes = len(config['OtherNodes'].keys()) -1 # É -1 pq um dos nós da lista sou eu
     doElection = False #Se devo começar uma eleição
 
     while True:
@@ -155,6 +159,7 @@ def leaderRoutine(clock:Clock, election: Election):
             # Se não consegui me conectar com nenhum nó ou recebi um tempo maior que o meu, inicio a eleição
             if (withou_contact == len_nodes) or (doElection):
                 election.initElection()
+            withou_contact = 0
 
 
 # Colocar a thread da rotina eterna
@@ -162,6 +167,10 @@ if __name__ == '__main__':
     # Tem uma thread para o menu
     thread_interface_manual = threading.Thread(target=menu, args=[clock])
     thread_interface_manual.daemon = True
+    
+    thread_clock_run = threading.Thread(target=clock.run)
+    thread_clock_run.daemon = True
+
     # Tem a thread que verifica se o líder caiu
     thread_verify_contactLeader = threading.Thread(target=verifyContactLeader, args=[clock, election])
     thread_verify_contactLeader.daemon = True
@@ -171,12 +180,14 @@ if __name__ == '__main__':
     
     # Iniciando as threads
     thread_interface_manual.start()
+    thread_clock_run.start()
     thread_verify_contactLeader.start()
     thread_leader_routine.start()
     # Levantando a API
     app.run(port=config['port'], host='0.0.0.0')
     # Caso as threads sejam interrompidas
     thread_interface_manual.join()
+    thread_clock_run.join()
     thread_verify_contactLeader.join()
     thread_leader_routine.join()
 

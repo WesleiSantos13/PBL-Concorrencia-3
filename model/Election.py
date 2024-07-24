@@ -60,7 +60,7 @@ class Election:
                     continue
                 # Caso contrário, encerro o processo pois já sei que não sou eu
                 else:
-                    logging.info(f'ELECTION - Venci {node}')
+                    logging.info(f'ELECTION - Perdi {node}')
                     iAmLeader = False
                     break
         
