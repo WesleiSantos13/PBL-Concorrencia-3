@@ -17,7 +17,10 @@
 
 from model.Node import Clock
 from infra.config import config
+
 import logging
+
+import requests
 
 class Election:
 
@@ -26,11 +29,7 @@ class Election:
         self.logging= logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         # print(f"Em eleição o drif foi {self.clock.getDrift()}")
 
-    def sendMessage(self, payload: dict, destination_ip: str, destination_port: str, close_conn: bool):
-        pass
-    
-    def receiveMessage(self):
-        pass
+
     
     def initElection(self):
         logging.info(f'START ELECTION - Uma eleição foi iniciada')
@@ -48,7 +47,12 @@ class Election:
                 logging.info(f'ELECTION - Irei testar votos com {node}')
                 # Manda a mensagem de eleição e Aguarda a resposta do nó
                 msg["time"] = self.clock.time # Altero o tempo para cada par de verificação
-                res = self.sendMessage(msg, config["OtherNodes"][node], config["port"])
+                # res = self.sendMessage(msg, config["OtherNodes"][node], config["port"])
+                try:
+                    requests.patch(f"http://{config['OtherNodes'][node]}:{config['port']}/compare_election", json=msg, timeout=1)
+                    res = True
+                except:
+                    res = False
                 # Se não recebi nada ou se deu erro na conexão ou se eu recebi a resposta e tenho o tempo maior, eu passo pro próximo nó (estou acreditando que sou o líder)
                 if res == False:
                     logging.info(f'ELECTION - Venci {node}')
@@ -78,5 +82,10 @@ class Election:
         for node in config['OtherNodes'].keys(): # ["1", "2", "3"]
             # Se não for pro próprio nó
             if node != self.clock.id:
-                self.sendMessage(msg, config["OtherNodes"][node], config["port"])
+                # self.sendMessage(msg, config["OtherNodes"][node], config["port"])
+                try:
+                    requests.patch(f"http://{config['OtherNodes'][node]}:{config['port']}/define_election", json=msg, timeout=1)
+                    res = True
+                except:
+                    res = False
         
