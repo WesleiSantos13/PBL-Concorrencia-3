@@ -13,6 +13,8 @@ from model.Election import Election
 app = Flask(__name__)
 
 clock = Clock(config['drift'], 0)
+app.logger.disabled = True
+logging.getLogger('werkzeug').disabled = True
 
 ### ================================================ BLOCO PARA ROTAS ==================================================== ###
 @app.route('/', methods=['PATCH'])
