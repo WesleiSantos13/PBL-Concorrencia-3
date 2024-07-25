@@ -86,7 +86,7 @@ def send_periodically(clock, interval):
     '''Envia o estado atual do relógio para os outros nós periodicamente.'''
     while True:
         send_clock_update(clock)
-        time.sleep(interval)  # Aguarda pelo intervalo especificado antes de enviar novamente
+        #time.sleep(interval)  # Aguarda pelo intervalo especificado antes de enviar novamente
 
 
 def changeTime(clock: Clock):

@@ -12,7 +12,7 @@ services:
     tty: true
     networks:
       minha_rede:
-        ipv4_address: 172.16.103.11
+        ipv4_address: 172.16.103.6
   
   node2:
     image: pbl3
