@@ -1,13 +1,12 @@
 from flask import Flask, request, jsonify
 import requests
-from datetime import datetime, timedelta
 import threading
 import logging
 import os
 import time
+
 from infra.config import config
 from model.Node import Clock
-from model.Election import Election
 
 ## ======= Bloco para instânciação de objetos necessários ======= ##
 app = Flask(__name__)
@@ -17,11 +16,11 @@ app.logger.disabled = True
 logging.getLogger('werkzeug').disabled = True
 
 ### ================================================ BLOCO PARA ROTAS ==================================================== ###
-@app.route('/', methods=['PATCH'])
+@app.route('/', methods=['POST'])
 def currentTime():
-    '''Fornece o valor de clock atual. (ACESSADO EXCLUSIVAMENTE POR UM LIDER)'''
+    '''Fornece o valor de clock atual.'''
     content = request.json
-    clock.insertTime(content['nodeId'], content['time'])
+    clock.insertOtherTime(content['nodeId'], content['time'])
     return jsonify({"mensagem": "ok"}), 200
 
 ### ================================================ BLOCO PARA FUNÇÕES DE THREADS ==================================================== ###
@@ -56,24 +55,29 @@ def menu(clock: Clock):
         else:
             print("Opção inválida. Tente novamente.")
 
-def send_clock_update(clock):
+def send_clock_update(clock: Clock):######################################################################################ERRADO
     '''Envia o estado atual do relógio para os outros nós.'''
     msg = {
         "nodeId": clock.id,
         "time": clock.getTime()
     }
-    for node, address in config['OtherNodes'].items():
-        # Se não for para o próprio nó
-        if node != clock.id:
-            url = f"http://{address}/"
-            try:
-                response = requests.post(url, json=msg)
-                if response.status_code == 200:
-                    print(f"Enviado para o nó {node}.")
-                else:
-                    print(f"Falha ao enviar para o nó {node}. Status Code: {response.status_code}")
-            except requests.RequestException as e:
-                print(f"Erro ao enviar tempo para o nó {node}: {e}")
+    # print(f"Os endereços {config['OtherNodes'].items()}")
+    if len(config['OtherNodes'].items()) > 0:
+        for node, address in config['OtherNodes'].items():
+            # Se não for para o próprio nó
+            if node != clock.id:
+                url = f"http://{address}:{config['port']}/"
+                try:
+                    response = requests.post(url, json=msg)
+                    if response.status_code == 200:
+                        # print(f"Enviado para o nó {node}.")
+                        pass
+                    else:
+                        pass
+                        # print(f"Falha ao enviar para o nó {node}. Status Code: {response.status_code}")
+                except requests.RequestException as e:
+                    pass
+                    # print(f"Erro ao enviar tempo para o nó {node}: {e}")
 
 
 
@@ -85,6 +89,22 @@ def send_periodically(clock, interval):
         time.sleep(interval)  # Aguarda pelo intervalo especificado antes de enviar novamente
 
 
+def changeTime(clock: Clock):
+    while True:
+        try:
+            if len(clock.clock.values()) > 0:
+                max_time = max(clock.clock.values())
+                myTime = clock.getTime()
+                print(f"O maior, dentre os outros, é {max_time}; O meu é {myTime}")
+                if max_time > myTime:
+                    newTime = max_time
+                    if max_time - myTime > config['DIFFER_LIMIT']:
+                        newTime = myTime + (max_time - myTime)/4
+                    clock.setTime(newTime)
+                time.sleep(2)
+        except Exception as e:
+            # print(f"deu erro em mudar tempo:\n{e}")
+            pass
 
 
 # Colocar a thread da rotina eterna
@@ -97,14 +117,17 @@ if __name__ == '__main__':
     thread_clock_run.daemon = True
 
     # Inicia a thread para enviar atualizações periodicamente
-    update_interval = 2  # Intervalo em segundos
-    thread_send_updates = threading.Thread(target=send_periodically, args=[clock, update_interval])
+    thread_send_updates = threading.Thread(target=send_periodically, args=[clock, config['timeToRequestParticipant']])
     thread_send_updates.daemon = True
 
+    # Thread que atualiza o relógio interno
+    thread_changeTime = threading.Thread(target=changeTime, args=[clock])
+    thread_changeTime.daemon = True
     # Iniciando as threads
     thread_interface_manual.start()
     thread_clock_run.start()
     thread_send_updates.start()
+    thread_changeTime.start()
 
     # Levantando a API
     app.run(port=config['port'], host='0.0.0.0')
@@ -113,3 +136,4 @@ if __name__ == '__main__':
     thread_interface_manual.join()
     thread_clock_run.join()
     thread_send_updates.join()
+    thread_changeTime.join()

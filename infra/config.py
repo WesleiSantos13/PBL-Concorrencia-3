@@ -12,3 +12,6 @@ config = {
     "timeToRequestParticipant": 2, # Indica a cada x segundos o líder vai perguntar aos seus participantes
     "DIFFER_LIMIT": 10
 }
+
+
+# '{"1": "172.16.103.11", "2": "172.16.103.7", "3": "172.16.103.4"}'

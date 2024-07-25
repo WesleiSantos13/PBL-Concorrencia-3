@@ -25,62 +25,22 @@ class ObjNode(TypedDict):
 
 
 class Clock:
-    '''É UMA CLASSE SINGLETON'''
-    _instance = None
-
-
-    def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            cls._instance = super(Clock, cls).__new__(cls)
-        return cls._instance
     
     def __init__(self, drift: float, startTime: int) -> None:
-        if not hasattr(self, 'initialized'):  # Verifica se já foi inicializado
-            print("entrei")
-            self.drift: float = drift #
-            self.time: int = startTime # Tempo inicial do relógio
-            self.lock = threading.Lock() # 
-            self.power: bool = True # Indica se o relógio está ligado
-            self.id: str = config['nodeId'] # O id próprio do nó
-            self.state: State = State.NORMAL # 
-            self.leader:str = None # Aqui será o id do líder
-            self.leaderLastContact: datetime = None
-            self.clock = {}
+        self.drift: float = drift #
+        self.time: int = startTime # Tempo inicial do relógio
+        self.lock = threading.Lock() # 
+        self.id: str = config['nodeId'] # O id próprio do nó
+        self.clock = {}
         
-    def insertTime(self, nodeId, time):
+    def insertOtherTime(self, nodeId, time):
+        self.lock.acquire()
         self.clock[nodeId] = time
-
-    def imLeader(self) -> bool:
-        return self.leader == self.id
+        self.lock.release()
     
     def getTime(self):
         return self.time
     
-    def getLeader(self):
-        return self.leader
-    
-    def setLeader(self, new_node_id_leader):
-        self.lock.acquire()
-        self.leader = new_node_id_leader
-        self.lock.release()
-
-    def leaderIsDead(self, now: datetime):
-        '''Após 2 segundos do último contato do líder, irá retornar True'''
-        # Se for None (acabei de inicializar), devo informar que devo iniciar uma eleição
-        if self.leaderLastContact is None:
-            return True
-        # Caso contrário, faço a verificação de tempo
-        self.lock.acquire()
-        difference = abs(self.leaderLastContact - now)
-        self.lock.release()
-
-        return difference > timedelta(seconds=2)
-
-
-    def setLeaderLastContact(self, leaderLastContact):
-        self.lock.acquire()
-        self.leaderLastContact = leaderLastContact
-        self.lock.release()
 
     def getDrift(self):
         self.lock.acquire()
@@ -102,7 +62,7 @@ class Clock:
     def run(self):
         '''Função chamada pela thread que irá prover o ciclo de vida do relógio no nó'''
         # Enquanto estiver ligado
-        while (self.power == True):
+        while (True):
             # Durma pelo tempo do drif
             time.sleep(self.getDrift())
             # Atualize seu relógio em +1

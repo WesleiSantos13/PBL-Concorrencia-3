@@ -2,12 +2,9 @@ version: '3.8'
 
 ## Este arquivo é apenas para teste ## 
 
-
 services:
   node1:
     image: pbl3
-    # ports:
-    #   - "7798:7798"
     environment:
         - NODEID=1
     #   - ADDRESNODES=['172.16.103.7', '172.16.103.11', '172.16.103.4']
@@ -20,8 +17,6 @@ services:
   
   node2:
     image: pbl3
-    # ports:
-    #   - "7798:7798"
     environment:
         - NODEID=2
     #   - ADDRESNODES=['172.16.103.7', '172.16.103.11', '172.16.103.4']
@@ -34,8 +29,6 @@ services:
 
   node3:
     image: pbl3
-    # ports:
-    #   - "7798:7798"
     environment:
         - NODEID=3
     #   - ADDRESNODES='{1: 172.16.103.7, 2: 172.16.103.11, 3: 172.16.103.4}'
