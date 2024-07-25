@@ -95,7 +95,7 @@ def changeTime(clock: Clock):
             if len(clock.clock.values()) > 0:
                 max_time = max(clock.clock.values())
                 myTime = clock.getTime()
-                print(f"O maior, dentre os outros, é {max_time}; O meu é {myTime}")
+                # print(f"O maior, dentre os outros, é {max_time}; O meu é {myTime}")
                 if max_time > myTime:
                     newTime = max_time
                     if max_time - myTime > config['DIFFER_LIMIT']:

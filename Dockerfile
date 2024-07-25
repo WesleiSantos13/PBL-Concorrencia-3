@@ -7,6 +7,8 @@ WORKDIR /app
 # Copie o código fonte da aplicação para o contêiner
 COPY . /app
 
+EXPOSE 7798
+
 # Instale as dependências Python
 RUN pip install -r requirements.txt
 
