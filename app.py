@@ -1,15 +1,11 @@
 from flask import Flask, request, jsonify
-
 import requests
-
 from datetime import datetime, timedelta
-
 import threading
-
+import logging
 import os
-
+import time
 from infra.config import config
-
 from model.Node import Clock
 from model.Election import Election
 
@@ -17,70 +13,19 @@ from model.Election import Election
 app = Flask(__name__)
 
 clock = Clock(config['drift'], 0)
-election = Election(clock)
-
-
 
 ### ================================================ BLOCO PARA ROTAS ==================================================== ###
-@app.route('/', methods=['GET'])
+@app.route('/', methods=['PATCH'])
 def currentTime():
     '''Fornece o valor de clock atual. (ACESSADO EXCLUSIVAMENTE POR UM LIDER)'''
-    clock.setLeaderLastContact(datetime.now()) # já  salvo como último contato do líder
-    msg = {
-    "node": clock.id,
-    "time": clock.time 
-    }
-    return jsonify({"mensagem": msg}), 200
-
-
-@app.route('/updateTime', methods=['PATCH'])
-def forced_time_update():
-    '''Atualiza o tempo do relógio. (ACESSADO EXCLUSIVAMENTE POR UM LIDER)'''
-    clock.setLeaderLastContact(datetime.now()) # já  salvo como último contato do líder
-    # Obtem o body da requisição
     content = request.json
-    # Se a mensagem veio de quem eu enxergo como líder
-    if content['node'] == clock.getLeader():
-        new_time = content['time']
-        # Atualiza o tempo
-        clock.setTime(new_time)
-        return jsonify({"msg": "ok"}), 200
-    # Se não veio do líder
-    else:
-        return jsonify({"msg": "__"}), 400
-
-
-
-@app.route('/compare_election', methods=['POST'])
-def compare_votes():
-    '''Utilizado como peça de uma eleição para comparação de vencedor dois a dois'''
-    # Obtem o body da requisição
-    content = request.json
-    if content['time'] > clock.time:
-        # Quem receber este deverá continuar a eleição
-        return jsonify({"msg": "you_win"}), 200
-    else:
-        # ?????????????????????????????????????????????????????????????????????????
-        # Quem receber este deverá encerra eleição e aguardar que seja dito quem é o líder, eu devo prosseguir com a eleição (exceto para esse nó que eu já sei que sou maior) ???????
-        return jsonify({"msg": "i_win"}), 200
-        
-
-@app.route('/define_election', methods=['POST'])
-def result_election():
-    '''Utilizado como peça de uma eleição para informar quem é o vencedor'''
-    # Obtem o body da requisição
-    content = request.json
-    clock.setLeader(content['node']) # Salva o id do nó vencedor
-    return jsonify({"msg": "ok"}), 200
-
-
-
+    clock.insertTime(content['nodeId'], content['time'])
+    return jsonify({"mensagem": "ok"}), 200
 
 ### ================================================ BLOCO PARA FUNÇÕES DE THREADS ==================================================== ###
 def menu(clock: Clock):
     """Função para o menu de alteração do incremento.
     Será executado como uma thread"""
-
     while True:
         os.system('cls' if os.name == 'nt' else 'clear')
         print(f"Drift={clock.getDrift()}  Time={clock.getTime()}")
@@ -109,57 +54,35 @@ def menu(clock: Clock):
         else:
             print("Opção inválida. Tente novamente.")
 
+def send_clock_update(clock):
+    '''Envia o estado atual do relógio para os outros nós.'''
+    msg = {
+        "nodeId": clock.id,
+        "time": clock.getTime()
+    }
+    for node, address in config['OtherNodes'].items():
+        # Se não for para o próprio nó
+        if node != clock.id:
+            url = f"http://{address}/"
+            try:
+                response = requests.post(url, json=msg)
+                if response.status_code == 200:
+                    print(f"Enviado para o nó {node}.")
+                else:
+                    print(f"Falha ao enviar para o nó {node}. Status Code: {response.status_code}")
+            except requests.RequestException as e:
+                print(f"Erro ao enviar tempo para o nó {node}: {e}")
 
-def verifyContactLeader( clock: Clock, election: Election):
-    ''' Este método só faz verificar se o líder caiu para poder iniciar uma eleição'''
+
+
+
+def send_periodically(clock, interval):
+    '''Envia o estado atual do relógio para os outros nós periodicamente.'''
     while True:
-        # Se eu já passei do tempo para esperar contato do líder e eu não sou o líder. Ou se o líder é vazio (acontece quando inicia o nó)
-        if ( clock.leaderIsDead(datetime.now()) ) and  (not clock.imLeader()):
-            # Inicia a eleição
-            election.initElection()
+        send_clock_update(clock)
+        time.sleep(interval)  # Aguarda pelo intervalo especificado antes de enviar novamente
 
 
-
-def leaderRoutine(clock:Clock, election: Election):
-    withou_contact = 0
-    len_nodes = len(config['OtherNodes'].keys()) -1 # É -1 pq um dos nós da lista sou eu
-    doElection = False #Se devo começar uma eleição
-
-    while True:
-        # Se eu que sou o líder
-        if clock.imLeader():
-            # Vou sair pedindo para todos os nós seus tempos
-            for node in config['OtherNodes'].keys(): # ["1", "2", "3"]
-                # Se não for pro próprio nó
-                if node != clock.id:
-                    try:
-                        response = requests.get(f"http://{config['OtherNodes'][node]}:{config['port']}/", timeout=1)
-                        # Se o tempo dele for maior que o meu, inicio uma eleição
-                        if response['time'] > clock.getTime():
-                            doElection = True
-                            break
-                        else:
-                            differ = clock.getTime() - response['time']
-                            # verifico se está muito defasado, se estiver eu mando atualizar com metade da defasagem. caso contrário eu mando o meu horário
-                            if differ > config['LIMIT']:
-                                new_time = clock.getTime() + differ/2
-                            # 
-                            payload = {
-                                "node": clock.id,
-                                "role": "LEADER",
-                                "action": "CHANGE_TIME",
-                                "time" : new_time
-                            }
-                            try:
-                                requests.patch(f"http://{config['OtherNodes'][node]}:{config['port']}/updateTime", json=payload, timeout=1)
-                            except: ### ===============OQ FAZER AQUI????????????????????????????????????????????????????????????????????????????
-                                pass
-                    except:
-                        withou_contact = withou_contact +1 # Se eu não tive contato com o nó, digo que não consegui contactar mais um
-            # Se não consegui me conectar com nenhum nó ou recebi um tempo maior que o meu, inicio a eleição
-            if (withou_contact == len_nodes) or (doElection):
-                election.initElection()
-            withou_contact = 0
 
 
 # Colocar a thread da rotina eterna
@@ -171,31 +94,20 @@ if __name__ == '__main__':
     thread_clock_run = threading.Thread(target=clock.run)
     thread_clock_run.daemon = True
 
-    # Tem a thread que verifica se o líder caiu
-    thread_verify_contactLeader = threading.Thread(target=verifyContactLeader, args=[clock, election])
-    thread_verify_contactLeader.daemon = True
-    # Tem thread que gera a rotina do líder 
-    thread_leader_routine = threading.Thread(target=leaderRoutine, args=[clock, election])
-    thread_leader_routine.daemon = True
-    
+    # Inicia a thread para enviar atualizações periodicamente
+    update_interval = 2  # Intervalo em segundos
+    thread_send_updates = threading.Thread(target=send_periodically, args=[clock, update_interval])
+    thread_send_updates.daemon = True
+
     # Iniciando as threads
     thread_interface_manual.start()
     thread_clock_run.start()
-    thread_verify_contactLeader.start()
-    thread_leader_routine.start()
+    thread_send_updates.start()
+
     # Levantando a API
     app.run(port=config['port'], host='0.0.0.0')
+
     # Caso as threads sejam interrompidas
     thread_interface_manual.join()
     thread_clock_run.join()
-    thread_verify_contactLeader.join()
-    thread_leader_routine.join()
-
-
-# Colocar as thread do menu
-# Colocar as thread que verifica se o líder caiu
-# Colocar a thread de rotina diária de um líder (ficar sempre pedindo)
-
-# referencias
-# https://www.cin.ufpe.br/~avmm/arquivos/provas%20software/resuminho3.pdf
-# https://www-di.inf.puc-rio.br/~endler/courses/DA/transp/Election.pdf
+    thread_send_updates.join()

@@ -45,6 +45,10 @@ class Clock:
             self.state: State = State.NORMAL # 
             self.leader:str = None # Aqui será o id do líder
             self.leaderLastContact: datetime = None
+            self.clock = {}
+        
+    def insertTime(self, nodeId, time):
+        self.clock[nodeId] = time
 
     def imLeader(self) -> bool:
         return self.leader == self.id
