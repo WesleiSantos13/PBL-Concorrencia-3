@@ -1,27 +1,6 @@
 import threading
 import time
-import socket
-from datetime import datetime, timedelta
-
-from typing import TypedDict
 from infra.config import config
-
-from enum import Enum
-
-class State(Enum):
-    DOWN = 1 # Quando um processo cai
-    NORMAL = 2 # Quando tudo está funcionando normalmente
-    ELECTION = 3 # Quando se deve iniciar uma eleição
-    REORGANIZING= 4 # Quando deve avisar aos demais o resultado da eleição
-
-
-
-class ObjNode(TypedDict):
-    ipAddres: int
-    connTcp:  socket.socket
-    lastTime: str 
-
-
 
 
 class Clock:
